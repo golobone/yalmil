@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<!-- saved from url=(0030)https://yalmil.pages.dev/login -->
+<html lang="es"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Iniciar sesión</title>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(135deg, #330a00, #662000);
+      color: #ffd8a6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      animation: fadeIn 0.8s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .card {
+      background: rgba(60, 20, 0, 0.3);
+      backdrop-filter: blur(8px);
+      border: 2px solid #ff8c00;
+      border-radius: 16px;
+      padding: 2rem;
+      max-width: 360px;
+      width: 90%;
+      box-shadow: 0 0 20px #ff8c0055;
+      text-align: center;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 1.8rem;
+      color: #ff8c00;
+      text-shadow: 0 0 10px #ff8c00aa;
+      margin-bottom: 0.5rem;
+    }
+
+    p.sub {
+      margin-bottom: 1.5rem;
+      font-size: 0.9rem;
+      color: #ffd8a6;
+      opacity: 0.9;
+    }
+
+    .btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      padding: 12px;
+      border-radius: 10px;
+      background-color: #ff8c00;
+      color: #330800;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 0 15px #ff8c0088;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 0 25px #ff8c00;
+    }
+
+    .btn img {
+      width: 20px;
+      height: 20px;
+    }
+
+    .status {
+      margin-top: 1rem;
+      font-size: 0.85rem;
+      min-height: 18px;
+      color: #ffd8a6;
+    }
+
+    .profile {
+      margin-top: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    .profile img {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      border: 2px solid #ff8c00;
+      object-fit: cover;
+      box-shadow: 0 0 10px #ff8c0055;
+    }
+
+    .small {
+      font-size: 0.9rem;
+      color: #ffd8a6;
+    }
+
+    .signout {
+      margin-top: 1rem;
+      background: transparent;
+      border: 1px solid #ff8c00;
+      color: #ffb366;
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .signout:hover {
+      background: #ff8c00;
+      color: #330800;
+    }
+
+    footer {
+      margin-top: 1rem;
+      font-size: 0.8rem;
+      color: #ffb366;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="card" role="main">
+    <h1>Iniciar sesión</h1>
+    <p class="sub">Accede con Google para continuar</p>
+
+    <button id="googleSignIn" class="btn" aria-label="Iniciar sesión con Google">
+      <img src="./Iniciar sesión_files/google.svg" alt="Google logo">
+      Continuar con Google
+    </button>
+
+    <div class="status" id="status"></div>
+
+    <div id="profileArea" style="display:none">
+      <div class="profile" id="profile"></div>
+      <button id="signOutBtn" class="signout">Cerrar sesión</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import {
+      getAuth,
+      GoogleAuthProvider,
+      signInWithPopup,
+      onAuthStateChanged,
+      signOut
+    } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+    import {
+      getDatabase,
+      ref,
+      update,
+      serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAZoRcoeC3MFMPYJWgl4dmNjq-U51dKD5o",
+      authDomain: "databaseloginweb.firebaseapp.com",
+      databaseURL: "https://databaseloginweb-default-rtdb.firebaseio.com",
+      projectId: "databaseloginweb",
+      storageBucket: "databaseloginweb.firebasestorage.app",
+      messagingSenderId: "121538864529",
+      appId: "1:121538864529:web:e92aaeaa4ba52618162630"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getDatabase(app);
+
+    const btn = document.getElementById('googleSignIn');
+    const status = document.getElementById('status');
+    const profileArea = document.getElementById('profileArea');
+    const profileDiv = document.getElementById('profile');
+    const signOutBtn = document.getElementById('signOutBtn');
+
+    btn.addEventListener('click', async () => {
+      status.textContent = 'Abriendo ventana de Google...';
+      const provider = new GoogleAuthProvider();
+      try {
+        const result = await signInWithPopup(auth, provider);
+        status.textContent = 'Autenticación exitosa. Guardando datos...';
+      } catch (error) {
+        console.error('Error en signInWithPopup:', error);
+        status.textContent = 'Error: ' + (error.message || 'no se pudo iniciar sesión');
+      }
+    });
+
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const uid = user.uid;
+        const userData = {
+          name: user.displayName || null,
+          email: user.email || null,
+          photoURL: user.photoURL || null,
+          lastLogin: Date.now()
+        };
+
+        profileDiv.innerHTML = `
+          <img src="${userData.photoURL || ''}" alt="Foto perfil" />
+          <div style="text-align:left">
+            <div class="small" style="font-weight:700">${userData.name || 'Sin nombre'}</div>
+            <div class="small">${userData.email || ''}</div>
+          </div>
+        `;
+        profileArea.style.display = 'block';
+
+        try {
+          await update(ref(db, 'users/' + uid), {
+            name: userData.name,
+            email: userData.email,
+            photoURL: userData.photoURL,
+            lastLogin: serverTimestamp()
+          });
+
+          status.textContent = 'Datos guardados. Redirigiendo...';
+          setTimeout(() => {
+            window.location.href = 'index.html';
+          }, 600);
+        } catch (dbErr) {
+          console.error('Error guardando en la DB:', dbErr);
+          status.textContent = 'Error guardando datos en la base de datos';
+        }
+      } else {
+        profileArea.style.display = 'none';
+        status.textContent = '';
+      }
+    });
+
+    signOutBtn.addEventListener('click', async () => {
+      try {
+        await signOut(auth);
+        status.textContent = 'Sesión cerrada';
+      } catch (err) {
+        console.error('Error al cerrar sesión:', err);
+        status.textContent = 'Error al cerrar sesión';
+      }
+    });
+  </script>
+
+</body></html>
